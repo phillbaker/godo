@@ -390,6 +390,26 @@ func TestDroplets_Neighbors(t *testing.T) {
 	}
 }
 
+func TestDroplets_Metrics(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/droplets/12345/metrics/sonar_disk_space", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"stat":[{"name":"/","values":[{"x":{"seconds":1476966001},"y":5.607080213478242},{"x":{"seconds":1476966061},"y":5.607080213478242}]}]}`)
+	})
+
+	metrics, _, err := client.Droplets.Metrics(12345, "disk_space", "6hour")
+	if err != nil {
+		t.Errorf("Droplets.Metrics returned error: %v", err)
+	}
+
+	expected := `{"stat":[{"name":"/","values":[{"x":{"seconds":1476966001},"y":5.607080213478242},{"x":{"seconds":1476966061},"y":5.607080213478242}]}]}`
+	if !reflect.DeepEqual(metrics, expected) {
+		t.Errorf("Droplets.Metrics\n got=%#v\nwant=%#v", metrics, expected)
+	}
+}
+
 func TestNetworkV4_String(t *testing.T) {
 	network := &NetworkV4{
 		IPAddress: "192.168.1.2",

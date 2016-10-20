@@ -1,6 +1,8 @@
 package godo
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +28,7 @@ type DropletsService interface {
 	Backups(int, *ListOptions) ([]Image, *Response, error)
 	Actions(int, *ListOptions) ([]Action, *Response, error)
 	Neighbors(int) ([]Droplet, *Response, error)
+	Metrics(int, string, string) (string, *Response, error)
 }
 
 // DropletsServiceOp handles communication with the droplet related methods of the
@@ -539,6 +542,29 @@ func (s *DropletsServiceOp) Neighbors(dropletID int) ([]Droplet, *Response, erro
 	}
 
 	return root.Droplets, resp, err
+}
+
+func (s *DropletsServiceOp) Metrics(dropletID int, metricName string, period string) (string, *Response, error) {
+	if dropletID < 1 {
+		return "", nil, NewArgError("dropletID", "cannot be less than 1")
+	}
+
+	path := fmt.Sprintf("%s/%d/metrics/sonar_%s?period=%s", dropletBasePath, dropletID, metricName, period)
+
+	req, err := s.client.NewRequest("GET", path, nil)
+	if err != nil {
+		return "", nil, err
+	}
+
+	var b bytes.Buffer
+	w := bufio.NewWriter(&b)
+	resp, err := s.client.Do(req, w)
+	if err != nil {
+		return "", resp, err
+	}
+
+	w.Flush()
+	return b.String(), resp, err
 }
 
 func (s *DropletsServiceOp) dropletActionStatus(uri string) (string, error) {
